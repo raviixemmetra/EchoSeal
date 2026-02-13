@@ -3,91 +3,71 @@ import pyttsx3
 import sys
 import os
 import time
+import base64
+
+# --- SECURITY IMPORTS ---
+from cryptography.fernet import Fernet, InvalidToken
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 # --- SETUP VOICE ENGINE ---
 try:
     engine = pyttsx3.init()
-    # Adjust speed slightly slower for clarity
     rate = engine.getProperty('rate')
     engine.setProperty('rate', rate - 50)
 except Exception as e:
     print(f"⚠️ Warning: Voice engine could not initialize. {e}")
 
+# --- SECURITY HELPERS ---
+def generate_key_from_password(password: str) -> bytes:
+    """Derives the same secure key used in sender.py."""
+    salt = b'echoseal_fixed_salt'  # MUST match sender.py salt exactly
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+    )
+    return base64.urlsafe_b64encode(kdf.derive(password.encode()))
+
+def try_decrypt(data):
+    """Checks if data is encrypted and handles password prompt."""
+    # Fernet tokens usually start with 'gAAAA'
+    if not data.startswith("gAAAA"):
+        return data  # It's plain text, return as-is
+
+    print("\n" + "🔒" * 20)
+    print("SECURE TRANSMISSION DETECTED")
+    print("This message is encrypted.")
+    print("🔒" * 20)
+    
+    password = input("\n🔑 Enter password to decrypt: ").strip()
+    
+    try:
+        key = generate_key_from_password(password)
+        cipher_suite = Fernet(key)
+        decrypted_message = cipher_suite.decrypt(data.encode()).decode()
+        print("✅ Access Granted. Decrypting...")
+        return decrypted_message
+    except InvalidToken:
+        print("❌ ACCESS DENIED: Incorrect password.")
+        return None
+    except Exception as e:
+        print(f"❌ Decryption Error: {e}")
+        return None
+
 def speak_message(text):
     """Speaks the text and blocks execution until finished."""
-    print(f"\n🔊 SPEAKING: 'Incoming transmission: {text}'")
+    print(f"\n🔊 SPEAKING: '{text}'")
     try:
-        engine.say(f"Incoming transmission: {text}")
+        engine.say(f"Transmission received: {text}")
         engine.runAndWait()
     except:
-        print("   (Voice disabled or failed, just reading text)")
-
-def scan_from_webcam():
-    print("\n" + "="*40)
-    print("👁️  MODE: WEBCAM SCANNER")
-    print("="*40)
-    print("... Initializing Camera ...")
-
-    cap = cv2.VideoCapture(0)
-    
-    # Check if camera opened successfully
-    if not cap.isOpened():
-        print("❌ Error: Could not access the webcam.")
-        return
-
-    detector = cv2.QRCodeDetector()
-    
-    print("\n🟢 SCANNING... Hold up the QR code. (Press 'q' to quit)")
-
-    last_data = ""
-    
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("❌ Error: Failed to grab frame.")
-            break
-            
-        data, bbox, _ = detector.detectAndDecode(frame)
-        
-        # If a QR code is detected
-        if data:
-            # Draw box if found
-            if bbox is not None:
-                for i in range(len(bbox)):
-                    pt1 = tuple(map(int, bbox[i][0]))
-                    pt2 = tuple(map(int, bbox[(i+1) % len(bbox)][0]))
-                    cv2.line(frame, pt1, pt2, (0, 255, 0), 3)
-            
-            # If it's a new message (different from the last one we spoke)
-            if data != last_data:
-                print(f"\n🔓 DECODED: '{data}'")
-                
-                # Update the window immediately to show the green box
-                cv2.imshow("EchoSeal Scanner", frame)
-                cv2.waitKey(1) 
-                
-                # Speak the message
-                speak_message(data)
-                
-                last_data = data
-                print("✅ Ready for next code... (Press 'q' to quit)")
-                
-                # Pause briefly to prevent immediate re-scanning
-                time.sleep(2)
-
-        # Show the live feed
-        cv2.imshow("EchoSeal Scanner", frame)
-        
-        # Check for 'q' key press
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
+        print("   (Voice failed, just reading text)")
 
 def scan_from_file():
     print("\n" + "="*40)
-    print("📂 MODE: FILE UPLOAD")
+    print("📂 MODE: SECURE FILE UPLOAD")
     print("="*40)
     
     filename = input("Enter filename: ").strip().strip('"')
@@ -101,50 +81,70 @@ def scan_from_file():
         return
 
     print("... Pre-processing Image ...")
-
-    # --- FIX 1: Add White Border (Quiet Zone) ---
-    # Scanners need a blank border to find the corner markers.
-    # We add 50 pixels of white padding around the entire image.
     img_padded = cv2.copyMakeBorder(img, 50, 50, 50, 50, cv2.BORDER_CONSTANT, value=[255, 255, 255])
-
     detector = cv2.QRCodeDetector()
     
-    # --- STRATEGY 1: Normal Scan (on Padded Image) ---
+    # Try multiple strategies to decode the artistic QR
     data, bbox, _ = detector.detectAndDecode(img_padded)
-
-    # --- STRATEGY 2: High Contrast + Padding ---
     if not data:
-        print("   (Applying high-contrast filter...)")
-        # Convert to grayscale
         gray = cv2.cvtColor(img_padded, cv2.COLOR_BGR2GRAY)
-        # Strong threshold: Make everything that isn't super bright PURE BLACK
-        # Inverted thresholding because your QR is white-on-dark
         _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
-        
-        # Now we have White QR on Black background. 
-        # But scanners prefer Black QR on White background.
-        # So we invert it one last time to get Black-on-White.
         final_search_img = cv2.bitwise_not(thresh)
-        
         data, bbox, _ = detector.detectAndDecode(final_search_img)
 
-    # --- RESULT ---
     if data:
-        print(f"\n🔓 DECODED: '{data}'")
-        speak_message(data)
+        # Attempt to decrypt if necessary
+        final_msg = try_decrypt(data)
         
-        # Show what the scanner actually saw (for debugging)
-        cv2.imshow("Scanner Vision", img_padded)
-        cv2.waitKey(1)
-        time.sleep(2)
-        cv2.destroyAllWindows()
+        if final_msg:
+            cv2.imshow("Scanner Vision", img_padded)
+            cv2.waitKey(1)
+            speak_message(final_msg)
+            time.sleep(1)
+            cv2.destroyAllWindows()
     else:
-        print("❌ Still could not read it. The spectrogram noise is overlapping the data modules.")
+        print("❌ Still could not read it. The background noise is too high.")
+
+def scan_from_webcam():
+    print("\n" + "="*40)
+    print("👁️  MODE: WEBCAM SCANNER")
+    print("="*40)
+    
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("❌ Error: Could not access the webcam.")
+        return
+
+    detector = cv2.QRCodeDetector()
+    print("\n🟢 SCANNING... (Press 'q' to quit)")
+    last_data = ""
+    
+    while True:
+        ret, frame = cap.read()
+        if not ret: break
+            
+        data, bbox, _ = detector.detectAndDecode(frame)
+        
+        if data and data != last_data:
+            # Check for encryption
+            final_msg = try_decrypt(data)
+            
+            if final_msg:
+                speak_message(final_msg)
+                last_data = data
+                time.sleep(2)
+
+        cv2.imshow("EchoSeal Scanner", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
 
 def main():
     while True:
         print("\n" + "="*40)
-        print("🔊 ECHO SEAL: RECEIVER")
+        print("🔊 ECHO SEAL: SECURE RECEIVER")
         print("="*40)
         print("[1] -> Scan via Webcam")
         print("[2] -> Upload Image File")
@@ -159,12 +159,9 @@ def main():
         elif choice == 'q':
             print("👋 Exiting...")
             sys.exit()
-        else:
-            print("❌ Invalid choice. Try again.")
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        print("\n\n👋 Forced Exit.")
         sys.exit()

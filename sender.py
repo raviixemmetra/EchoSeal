@@ -7,64 +7,62 @@ import keyboard
 import os
 import sys
 import time
+import base64
 from datetime import datetime
 
-# --- NEW IMPORTS FOR VISUALS ---
+# --- VISUALS & SECURITY IMPORTS ---
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 from PIL import Image
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 # --- CONFIGURATION ---
 SAMPLE_RATE = 44100
 OUTPUT_FOLDER = "output"
 TEMP_AUDIO_FILE = "temp_recording.wav"
-TEMP_SPEC_FILE = "temp_spectrogram.png" # Temp file for background image
+TEMP_SPEC_FILE = "temp_spectrogram.png"
 
 def ensure_output_folder():
-    """Creates the output folder if it doesn't exist."""
     if not os.path.exists(OUTPUT_FOLDER):
         os.makedirs(OUTPUT_FOLDER)
 
-# --- NEW FUNCTION: GENERATE SPECTROGRAM ---
+# --- NEW: KEY DERIVATION FUNCTION ---
+def generate_key_from_password(password: str) -> bytes:
+    """Creates a secure 32-byte key from a plain-text password."""
+    salt = b'echoseal_fixed_salt' # In production, use a unique salt per user
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=salt,
+        iterations=100000,
+    )
+    key = base64.urlsafe_b64encode(kdf.derive(password.encode()))
+    return key
+
 def create_spectrogram_background(audio_path):
     print("... Generating Sonic Fingerprint (Spectrogram) ...")
-    # 1. Load Audio using Librosa
     y, sr = librosa.load(audio_path, sr=SAMPLE_RATE)
-    
-    # 2. Create Mel-Spectrogram (heat map of frequencies)
-    # n_mels determines height of image, fmax limits highest frequency shown
     S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmax=8000)
-    # Convert to decibels (log scale) for visualization
     S_dB = librosa.power_to_db(S, ref=np.max)
 
-    # 3. Plotting
-    # Create a square figure without a frame
     plt.figure(figsize=(5, 5), frameon=False)
-    plt.axis('off') # Hide axes (numbers/ticks)
-    
-    # Display data using a high-contrast colormap like 'magma' or 'inferno'
+    plt.axis('off')
     librosa.display.specshow(S_dB, sr=sr, fmax=8000, cmap='magma')
-    
-    # 4. Save the raw plot as an image
-    # bbox_inches='tight', pad_inches=0 removes all whitespace borders
     plt.savefig(TEMP_SPEC_FILE, bbox_inches='tight', pad_inches=0, dpi=100)
-    plt.close() # Close plot to free memory
+    plt.close()
     return TEMP_SPEC_FILE
 
 def record_audio_manual():
-    """Records audio until the user presses the stop key."""
     print("\n" + "="*50)
-    print("🎤  ECHO SEAL: PUSH-TO-TALK MODE")
+    print("🎤  ECHO SEAL: SECURE SENDER (PTT)")
     print("="*50)
-    print("   [SPACE]    -> START Recording")
-    print("   [SPACE]    -> STOP Recording")
-    print("   [CTRL + C] -> Quit")
+    print("   [SPACE] -> START/STOP Recording")
     print("-" * 50)
 
-    print("waiting for start trigger...")
     keyboard.wait('space')
-    
     print("\n🔴 RECORDING! (Press SPACE to stop)...")
     
     recording = []
@@ -74,8 +72,7 @@ def record_audio_manual():
 
     stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, callback=callback)
     stream.start()
-
-    time.sleep(0.5) # Debounce
+    time.sleep(0.5) 
     keyboard.wait('space')
     
     stream.stop()
@@ -85,80 +82,69 @@ def record_audio_manual():
     full_recording = np.concatenate(recording, axis=0)
     wav_data = (full_recording * 32767).astype(np.int16)
     wav.write(TEMP_AUDIO_FILE, SAMPLE_RATE, wav_data)
-    
     return TEMP_AUDIO_FILE
 
-def transcribe_and_generate():
+def transcribe_encrypt_and_generate():
     ensure_output_folder()
 
     try:
-        # --- 1. RECORDING ---
+        # 1. RECORD
         audio_filename = record_audio_manual()
 
-        # --- 2. TRANSCRIPTION ---
+        # 2. TRANSCRIBE
         recognizer = sr.Recognizer()
-        print("\n... Processing Audio ...")
+        print("\n... Transcribing Audio ...")
         with sr.AudioFile(audio_filename) as source:
             audio_data = recognizer.record(source)
-            
         try:
             secret_message = recognizer.recognize_google(audio_data)
-        except (sr.UnknownValueError, sr.RequestError) as e:
-            print(f"❌ Error during transcription: {e}")
+        except Exception as e:
+            print(f"❌ Error: {e}")
             return
 
-        print(f"\n📝 DETECTED MESSAGE: '{secret_message}'")
-        confirm = input("Is this correct? (y/n): ").strip().lower()
-        if confirm != 'y':
-            print("🔄 Cancelled.")
+        print(f"\n📝 DETECTED: '{secret_message}'")
+        confirm = input("Confirm? (y/n): ").strip().lower()
+        if confirm != 'y': return
+
+        # --- 3. NEW: ENCRYPTION ---
+        password = input("\n🔒 Set a password to lock this QR: ").strip()
+        if not password:
+            print("❌ Password cannot be empty.")
             return
 
-        # --- 3. GENERATE VISUALS (Spectrogram + QR) ---
-        
-        # A. Generate Spectrogram Background
+        key = generate_key_from_password(password)
+        cipher_suite = Fernet(key)
+        # We encrypt the text and turn it into a string for the QR code
+        encrypted_text = cipher_suite.encrypt(secret_message.encode()).decode()
+        print("🔐 Message Encrypted.")
+
+        # 4. GENERATE VISUALS
         spec_bg_path = create_spectrogram_background(TEMP_AUDIO_FILE)
         
-        # B. Generate QR Code
-        print("... Minting QR Seal ...")
-        qr = qrcode.QRCode(
-            version=1,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
-            # Make box size larger for better resolution when merging
-            box_size=15, 
-            border=2,
-        )
-        qr.add_data(secret_message)
+        print("... Minting Secure QR Seal ...")
+        qr = qrcode.QRCode(version=1, box_size=15, border=2)
+        qr.add_data(encrypted_text) # Store the SCRAMBLED text
         qr.make(fit=True)
 
-        # IMPORTANT: Make QR background TRANSPARENT
         qr_img = qr.make_image(fill_color="white", back_color="transparent").convert("RGBA")
-
-        # C. Composite Images using Pillow (PIL)
-        # Open spectrogram and convert to RGBA
         bg_img = Image.open(spec_bg_path).convert("RGBA")
-        
-        # Resize background to match the exact size of the QR code image
         bg_img = bg_img.resize(qr_img.size, Image.Resampling.LANCZOS)
         
-        # Overlay QR onto background (Alpha Composite handles transparency)
         final_img = Image.alpha_composite(bg_img, qr_img)
 
-        # D. Save Final Image
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"sonic_seal_v2_{timestamp}.png"
-        filepath = os.path.join(OUTPUT_FOLDER, filename)
+        filepath = os.path.join(OUTPUT_FOLDER, f"secure_seal_{timestamp}.png")
         final_img.save(filepath)
 
         print("\n" + "="*50)
-        print(f"🚀 SUCCESS! Visual Seal saved to: {filepath}")
+        print(f"🚀 SECURE SEAL GENERATED: {filepath}")
         print("="*50)
 
     except KeyboardInterrupt:
         print("\n👋 Exiting...")
     finally:
-        # Cleanup all temporary files
         if os.path.exists(TEMP_AUDIO_FILE): os.remove(TEMP_AUDIO_FILE)
         if os.path.exists(TEMP_SPEC_FILE): os.remove(TEMP_SPEC_FILE)
 
 if __name__ == "__main__":
-    transcribe_and_generate()
+    transcribe_encrypt_and_generate()
