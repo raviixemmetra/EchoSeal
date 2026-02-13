@@ -87,49 +87,59 @@ def scan_from_webcam():
 
 def scan_from_file():
     print("\n" + "="*40)
-    print("hz  MODE: FILE UPLOAD")
+    print("📂 MODE: FILE UPLOAD")
     print("="*40)
     
-    # Ask user for the filename
-    filename = input("📂 Enter the filename (e.g., output/sonic_seal_xxxx.png): ").strip().strip('"')
-    
+    filename = input("Enter filename: ").strip().strip('"')
     if not os.path.exists(filename):
-        print(f"❌ Error: File '{filename}' not found.")
+        print("❌ File not found.")
         return
 
-    # Read image
     img = cv2.imread(filename)
     if img is None:
-        print("❌ Error: Could not read image file.")
+        print("❌ Could not read image.")
         return
+
+    print("... Pre-processing Image ...")
+
+    # --- FIX 1: Add White Border (Quiet Zone) ---
+    # Scanners need a blank border to find the corner markers.
+    # We add 50 pixels of white padding around the entire image.
+    img_padded = cv2.copyMakeBorder(img, 50, 50, 50, 50, cv2.BORDER_CONSTANT, value=[255, 255, 255])
 
     detector = cv2.QRCodeDetector()
     
-    print("... Decoding ...")
-    data, bbox, _ = detector.detectAndDecode(img)
-    
+    # --- STRATEGY 1: Normal Scan (on Padded Image) ---
+    data, bbox, _ = detector.detectAndDecode(img_padded)
+
+    # --- STRATEGY 2: High Contrast + Padding ---
+    if not data:
+        print("   (Applying high-contrast filter...)")
+        # Convert to grayscale
+        gray = cv2.cvtColor(img_padded, cv2.COLOR_BGR2GRAY)
+        # Strong threshold: Make everything that isn't super bright PURE BLACK
+        # Inverted thresholding because your QR is white-on-dark
+        _, thresh = cv2.threshold(gray, 200, 255, cv2.THRESH_BINARY)
+        
+        # Now we have White QR on Black background. 
+        # But scanners prefer Black QR on White background.
+        # So we invert it one last time to get Black-on-White.
+        final_search_img = cv2.bitwise_not(thresh)
+        
+        data, bbox, _ = detector.detectAndDecode(final_search_img)
+
+    # --- RESULT ---
     if data:
-        print(f"\n🔓 DECODED MESSAGE: '{data}'")
-        
-        # Draw a box around the QR code
-        if bbox is not None:
-            for i in range(len(bbox)):
-                pt1 = tuple(map(int, bbox[i][0]))
-                pt2 = tuple(map(int, bbox[(i+1) % len(bbox)][0]))
-                cv2.line(img, pt1, pt2, (0, 255, 0), 3)
-        
-        # Show the image
-        cv2.imshow(f"Decoded: {os.path.basename(filename)}", img)
-        cv2.waitKey(1) # Render the window momentarily
-        
-        # Speak! (Code waits here until speaking finishes)
+        print(f"\n🔓 DECODED: '{data}'")
         speak_message(data)
         
-        print("\n✅ Message delivered. Closing window...")
-        time.sleep(1) # Give user 1 second to see the result
-        cv2.destroyAllWindows() # <--- FIXED: Closes automatically
+        # Show what the scanner actually saw (for debugging)
+        cv2.imshow("Scanner Vision", img_padded)
+        cv2.waitKey(1)
+        time.sleep(2)
+        cv2.destroyAllWindows()
     else:
-        print("❌ Error: No QR code found in this image.")
+        print("❌ Still could not read it. The spectrogram noise is overlapping the data modules.")
 
 def main():
     while True:

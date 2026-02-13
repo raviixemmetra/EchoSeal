@@ -7,3 +7,5 @@ numpy
 keyboard
 opencv-python
 pyttsx3
+librosa         # For analyzing audio frequencies
+matplotlib      # For plotting the spectrogram image
