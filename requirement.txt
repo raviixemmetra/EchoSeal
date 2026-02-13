@@ -1,0 +1,3 @@
+SpeechRecognition
+qrcode[pil]
+pyaudio
