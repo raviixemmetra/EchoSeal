@@ -1,3 +1,9 @@
 SpeechRecognition
 qrcode[pil]
 pyaudio
+sounddevice
+scipy
+numpy
+keyboard
+opencv-python
+pyttsx3
