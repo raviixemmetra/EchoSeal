@@ -56,20 +56,28 @@ def create_spectrogram_background(audio_path):
     return TEMP_SPEC_FILE
 
 def record_audio_manual():
+    """Records audio until the user presses the stop key."""
     print("\n" + "="*50)
     print("🎤  ECHO SEAL: SECURE SENDER (PTT)")
     print("="*50)
-    print("   [SPACE] -> START/STOP Recording")
+    print("   [SPACE]    -> START Recording")
+    print("   [SPACE]    -> STOP Recording")
+    print("   [CTRL + C] -> Quit")
     print("-" * 50)
 
+    print("waiting for start trigger...")
     keyboard.wait('space')
     print("\n🔴 RECORDING! (Press SPACE to stop)...")
     
+    # 2. Start Recording Stream
+    # We record in a non-blocking way so we can check for key presses
     recording = []
     def callback(indata, frames, time, status):
-        if status: print(status, file=sys.stderr)
+        if status: 
+            print(status, file=sys.stderr)
         recording.append(indata.copy())
-
+        
+    # Open the stream
     stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, callback=callback)
     stream.start()
     time.sleep(0.5) 

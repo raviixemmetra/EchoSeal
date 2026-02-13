@@ -72,12 +72,12 @@ def scan_from_file():
     
     filename = input("Enter filename: ").strip().strip('"')
     if not os.path.exists(filename):
-        print("❌ File not found.")
+        print(f"❌ Error: File '{filename}' not found.")
         return
 
     img = cv2.imread(filename)
     if img is None:
-        print("❌ Could not read image.")
+        print("❌ Error: Could not read image file.")
         return
 
     print("... Pre-processing Image ...")
