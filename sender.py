@@ -6,6 +6,7 @@ import numpy as np
 import keyboard  # To detect key presses
 import os
 import time
+import sys
 from datetime import datetime
 
 # --- CONFIGURATION ---
