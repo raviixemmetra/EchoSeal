@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
-import Modal from './Modal';
-import Toast, { ToastType } from './Toast';
+import Modal from '../../components/Modal';
+import Toast, { ToastType } from '../../components/Toast';
 
 const Receiver = () => {
   const [message, setMessage] = useState<string>('');
@@ -146,11 +146,13 @@ const Receiver = () => {
   };
 
   return (
-    <div className="card-glass animate-slide-in-up" style={{ animationDelay: '0.1s' }}>
-      <h2 className="text-2xl font-bold mb-6 flex items-center text-gradient-secondary">
-        <span className="text-3xl mr-3">🔓</span>
-        <span>Unseal Message</span>
-      </h2>
+    <div className="card-glass animate-slide-in-up text-center" style={{ animationDelay: '0.1s' }}>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold inline-flex items-center text-gradient-secondary">
+          <span className="text-3xl mr-3">🔓</span>
+          <span>Unseal Message</span>
+        </h2>
+      </div>
 
       {/* Upload Zone - Only show when no image preview or message */}
       {!imagePreview && !message && (
@@ -177,7 +179,7 @@ const Receiver = () => {
             onChange={handleFileSelect}
             className="hidden"
           />
-          <div className="text-slate-400 pointer-events-none">
+          <div className="text-slate-400 pointer-events-none text-center">
             <div className="text-7xl mb-6 animate-float">
               {isDragging ? '📥' : '📁'}
             </div>

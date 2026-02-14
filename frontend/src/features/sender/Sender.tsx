@@ -1,13 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
-import AudioVisualizer from './AudioVisualizer';
-import Modal from './Modal';
-import Toast, { ToastType } from './Toast';
+import { useState, useRef } from 'react';
+import AudioVisualizer from '../../components/AudioVisualizer';
+import Modal from '../../components/Modal';
+import Toast, { ToastType } from '../../components/Toast';
 
-interface SealHistory {
-  id: string;
-  image: string;
-  timestamp: number;
-}
+
 
 const Sender = () => {
   const [recording, setRecording] = useState(false);
@@ -17,29 +13,14 @@ const Sender = () => {
   const [password, setPassword] = useState('');
   const [recordingTime, setRecordingTime] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [sealHistory, setSealHistory] = useState<SealHistory[]>([]);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
 
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   const pendingAudioBlob = useRef<Blob | null>(null);
 
-  // Load history from localStorage on mount
-  useEffect(() => {
-    const savedHistory = localStorage.getItem('echoseal_history');
-    if (savedHistory) {
-      setSealHistory(JSON.parse(savedHistory));
-    }
-  }, []);
 
-  // Save history to localStorage whenever it changes
-  useEffect(() => {
-    if (sealHistory.length > 0) {
-      localStorage.setItem('echoseal_history', JSON.stringify(sealHistory));
-    }
-  }, [sealHistory]);
 
   const startRecording = async () => {
     try {
@@ -114,14 +95,6 @@ const Sender = () => {
         const imageUrl = URL.createObjectURL(imageBlob);
         setQrImage(imageUrl);
 
-        // Add to history
-        const newSeal: SealHistory = {
-          id: Date.now().toString(),
-          image: imageUrl,
-          timestamp: Date.now(),
-        };
-        setSealHistory((prev) => [newSeal, ...prev].slice(0, 10)); // Keep last 10
-
         showToast('Seal created successfully!', 'success');
       } else {
         const error = await response.json();
@@ -159,26 +132,15 @@ const Sender = () => {
     }
   };
 
-  const deleteSeal = (id: string) => {
-    setSealHistory((prev) => prev.filter((seal) => seal.id !== id));
-    showToast('Seal deleted', 'info');
-  };
+
 
   return (
-    <div className="card-glass animate-slide-in-up">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold flex items-center text-gradient-primary">
+    <div className="card-glass animate-slide-in-up text-center">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold inline-flex items-center text-gradient-primary">
           <span className="text-3xl mr-3">🎙️</span>
           <span>Create Seal</span>
         </h2>
-        {sealHistory.length > 0 && (
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm font-medium"
-          >
-            {showHistory ? 'Hide' : 'Show'} History ({sealHistory.length})
-          </button>
-        )}
       </div>
 
       <div className="flex flex-col items-center space-y-10">
@@ -266,49 +228,7 @@ const Sender = () => {
           </div>
         )}
 
-        {/* History Gallery */}
       </div>
-      {sealHistory.length > 0 && (
-        <div className="mt-12 pt-8 border-t border-slate-700/50 w-full animate-fade-in">
-          <h3 className="text-lg font-semibold mb-6 text-slate-300">Recent Seals</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
-            {sealHistory.map((seal) => (
-              <div
-                key={seal.id}
-                className="group relative aspect-square bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-blue-500 transition-colors"
-              >
-                <img
-                  src={seal.image}
-                  alt="Historical Seal"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <a
-                    href={seal.image}
-                    download={`seal_${seal.id}.png`}
-                    className="p-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                    title="Download"
-                  >
-                    📥
-                  </a>
-                  <button
-                    onClick={() => deleteSeal(seal.id)}
-                    className="p-2 bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-                    title="Delete"
-                  >
-                    🗑️
-                  </button>
-                </div>
-                <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-xs text-slate-300 truncate">
-                  {new Date(seal.timestamp).toLocaleTimeString()}
-                </div>
-              </div>
-            ))}
-          </div>
-  
-        </div>
-      )}
 
 
       {/* Password Modal */}

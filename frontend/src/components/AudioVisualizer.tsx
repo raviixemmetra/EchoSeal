@@ -44,7 +44,8 @@ const AudioVisualizer = ({ stream, isActive }: AudioVisualizerProps) => {
 
       analyserRef.current.getByteFrequencyData(dataArrayRef.current);
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
+      // Dark background with slight transparency for trail effect
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.3)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const barWidth = (canvas.width / bufferLength) * 2.5;
@@ -54,14 +55,23 @@ const AudioVisualizer = ({ stream, isActive }: AudioVisualizerProps) => {
       for (let i = 0; i < bufferLength; i++) {
         barHeight = (dataArrayRef.current[i] / 255) * canvas.height;
 
-        // Create gradient for each bar
+        // Create vibrant gradient for each bar
         const gradient = ctx.createLinearGradient(0, canvas.height - barHeight, 0, canvas.height);
-        gradient.addColorStop(0, '#3b82f6');
-        gradient.addColorStop(0.5, '#14b8a6');
-        gradient.addColorStop(1, '#8b5cf6');
+        gradient.addColorStop(0, '#22d3ee'); // Cyan
+        gradient.addColorStop(0.3, '#3b82f6'); // Blue
+        gradient.addColorStop(0.6, '#8b5cf6'); // Purple
+        gradient.addColorStop(1, '#ec4899'); // Pink
 
         ctx.fillStyle = gradient;
+        
+        // Add glow effect
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#3b82f6';
+        
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+        // Reset shadow for next bar
+        ctx.shadowBlur = 0;
 
         x += barWidth + 1;
       }
@@ -78,11 +88,11 @@ const AudioVisualizer = ({ stream, isActive }: AudioVisualizerProps) => {
   }, [stream, isActive]);
 
   return (
-    <div className="w-full h-24 bg-slate-900/50 rounded-xl overflow-hidden border border-slate-700">
+    <div className="w-full h-28 bg-slate-900/70 rounded-2xl overflow-hidden border-2 border-slate-700/50 shadow-xl backdrop-blur-sm animate-scale-in">
       <canvas
         ref={canvasRef}
         width={600}
-        height={96}
+        height={112}
         className="w-full h-full"
       />
     </div>

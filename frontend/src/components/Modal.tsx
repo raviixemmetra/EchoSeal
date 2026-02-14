@@ -38,27 +38,29 @@ const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
       className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
       onClick={onClose}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      {/* Enhanced Backdrop */}
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-md" />
 
       {/* Modal */}
       <div
-        className="relative bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl max-w-md w-full animate-scale-in"
+        className="relative bg-slate-800/95 backdrop-blur-xl border-2 border-slate-600/50 rounded-3xl shadow-2xl max-w-md w-full animate-bounce-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <h3 className="text-xl font-bold text-white">{title}</h3>
+        <div className="flex items-center justify-between p-8 border-b border-slate-700/50">
+          <h3 className="text-2xl font-bold text-white flex items-center gap-3">
+            {title}
+          </h3>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-700 transition-colors text-slate-400 hover:text-white"
+            className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-700 transition-all text-slate-400 hover:text-white hover:rotate-90"
           >
             ✕
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">{children}</div>
+        <div className="p-8">{children}</div>
       </div>
     </div>
   );
