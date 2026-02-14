@@ -1,0 +1,12 @@
+Terminal 1: Start the Backend (Python)
+cd backend
+uvicorn server:app --reload
+
+Success Indicator: You should see Uvicorn running on http://127.0.0.1:8000.
+
+
+Terminal 2: Start the Frontend (React)
+cd frontend
+npm run dev
+
+Success Indicator: You should see Local: http://localhost:5173/.
