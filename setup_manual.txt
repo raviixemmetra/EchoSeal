@@ -10,3 +10,18 @@ cd frontend
 npm run dev
 
 Success Indicator: You should see Local: http://localhost:5173/.
+
+
+
+
+
+
+
+
+
+
+winget install Gyan.FFmpeg
+
+ffmpeg -version
+
+where ffmpeg
