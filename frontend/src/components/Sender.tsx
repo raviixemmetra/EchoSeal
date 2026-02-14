@@ -181,44 +181,49 @@ const Sender = () => {
         )}
       </div>
 
-      <div className="flex flex-col items-center space-y-8">
+      <div className="flex flex-col items-center space-y-10">
         {/* Recording Button */}
-        <div className="relative flex flex-col items-center gap-6">
-          <button
-            onClick={recording ? stopRecording : startRecording}
-            disabled={processing}
-            className={`w-40 h-40 rounded-full flex flex-col items-center justify-center gap-3 transition-all duration-300 font-bold text-lg ${
-              recording
-                ? 'bg-red-500 shadow-glow-blue animate-pulse-glow'
-                : processing
-                ? 'bg-slate-600 cursor-not-allowed'
-                : 'bg-gradient-primary hover:scale-110 shadow-xl'
-            }`}
-          >
-            {recording ? (
-              <>
-                <div className="w-12 h-12 bg-white rounded-sm" />
-                <span className="text-white text-sm">Stop</span>
-              </>
-            ) : processing ? (
-              <>
-                <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
-                <span className="text-white text-sm">Processing...</span>
-              </>
-            ) : (
-              <>
-                <div className="w-0 h-0 border-t-[16px] border-t-transparent border-l-[28px] border-l-white border-b-[16px] border-b-transparent ml-2" />
-                <span className="text-white text-sm font-bold">Record</span>
-              </>
+        <div className="text-center space-y-6">
+          <div className="relative">
+            {recording && (
+              <div className="absolute inset-0 rounded-full animate-ping bg-red-500/20" />
             )}
-          </button>
+            <button
+              onClick={recording ? stopRecording : startRecording}
+              disabled={processing}
+              className={`w-40 h-40 rounded-full flex flex-col items-center justify-center gap-3 transition-all duration-300 font-bold text-lg ${
+                recording
+                  ? 'bg-red-500 shadow-glow-blue animate-pulse-glow'
+                  : processing
+                  ? 'bg-slate-600 cursor-not-allowed'
+                  : 'bg-gradient-primary hover:scale-110 shadow-xl'
+              }`}
+            >
+              {recording ? (
+                <>
+                  <div className="w-12 h-12 bg-white rounded-sm" />
+                  <span className="text-white text-sm">Stop</span>
+                </>
+              ) : processing ? (
+                <>
+                  <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                  <span className="text-white text-sm">Processing...</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-0 h-0 border-t-[16px] border-t-transparent border-l-[28px] border-l-white border-b-[16px] border-b-transparent ml-2" />
+                  <span className="text-white text-sm font-bold">Record</span>
+                </>
+              )}
+            </button>
 
-          {/* Recording Timer */}
-          {recording && (
-            <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-red-500 px-6 py-2 rounded-full text-white font-mono text-base font-bold animate-pulse shadow-lg">
-              {formatTime(recordingTime)}
-            </div>
-          )}
+            {/* Recording Timer */}
+            {recording && (
+              <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 bg-red-500 px-6 py-2 rounded-full text-white font-mono text-base font-bold animate-pulse shadow-lg">
+                {formatTime(recordingTime)}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Status Text */}
@@ -262,45 +267,49 @@ const Sender = () => {
         )}
 
         {/* History Gallery */}
-        {showHistory && sealHistory.length > 0 && (
-          <div className="w-full mt-6 animate-slide-in-up">
-            <h3 className="text-lg font-bold text-slate-300 mb-3">Recent Seals</h3>
-            <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
-              {sealHistory.map((seal) => (
-                <div
-                  key={seal.id}
-                  className="relative group bg-slate-700 rounded-lg overflow-hidden hover:ring-2 ring-blue-400 transition-all"
-                >
-                  <img
-                    src={seal.image}
-                    alt="Historical Seal"
-                    className="w-full h-32 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <a
-                      href={seal.image}
-                      download={`seal_${seal.id}.png`}
-                      className="p-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      📥
-                    </a>
-                    <button
-                      onClick={() => deleteSeal(seal.id)}
-                      className="p-2 bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-xs text-slate-300">
-                    {new Date(seal.timestamp).toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+      {sealHistory.length > 0 && (
+        <div className="mt-12 pt-8 border-t border-slate-700/50 w-full animate-fade-in">
+          <h3 className="text-lg font-semibold mb-6 text-slate-300">Recent Seals</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-6">
+            {sealHistory.map((seal) => (
+              <div
+                key={seal.id}
+                className="group relative aspect-square bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-blue-500 transition-colors"
+              >
+                <img
+                  src={seal.image}
+                  alt="Historical Seal"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <a
+                    href={seal.image}
+                    download={`seal_${seal.id}.png`}
+                    className="p-2 bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                    title="Download"
+                  >
+                    📥
+                  </a>
+                  <button
+                    onClick={() => deleteSeal(seal.id)}
+                    className="p-2 bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                    title="Delete"
+                  >
+                    🗑️
+                  </button>
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-2 py-1 text-xs text-slate-300 truncate">
+                  {new Date(seal.timestamp).toLocaleTimeString()}
+                </div>
+              </div>
+            ))}
+          </div>
+  
+        </div>
+      )}
+
 
       {/* Password Modal */}
       <Modal

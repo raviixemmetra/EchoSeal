@@ -222,22 +222,14 @@ const Receiver = () => {
         </div>
       )}
 
-      {/* Decrypted Message */}
+      {/* Message Output */}
       {message && (
-        <div className="mt-6 animate-scale-in">
-          <div className="relative p-6 bg-gradient-to-br from-teal-900/40 to-emerald-900/40 border-2 border-teal-500/30 rounded-2xl">
+        <div className="mt-12 animate-fade-in">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 border border-slate-700 shadow-inner relative overflow-hidden group">
             {/* Speaking Animation */}
             {isSpeaking && (
-              <div className="absolute top-4 right-4 flex gap-1">
-                <div className="w-1 h-4 bg-teal-400 rounded-full animate-pulse" style={{ animationDelay: '0s' }} />
-                <div className="w-1 h-6 bg-teal-400 rounded-full animate-pulse" style={{ animationDelay: '0.1s' }} />
-                <div className="w-1 h-4 bg-teal-400 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-              </div>
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-500 to-purple-500 animate-pulse" />
             )}
-
-            <p className="text-xs text-teal-400 uppercase tracking-wider mb-3 font-bold flex items-center gap-2">
-              <span>🔊</span> Decrypted Transmission
-            </p>
             <p className="text-xl text-white font-medium leading-relaxed mb-4">
               "{message}"
             </p>

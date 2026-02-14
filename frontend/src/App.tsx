@@ -48,7 +48,7 @@ function App() {
 
         {/* Main Content Grid */}
         <main className="container mx-auto px-6 pb-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 max-w-7xl mx-auto">
             <Sender />
             <Receiver />
           </div>
